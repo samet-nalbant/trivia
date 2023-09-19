@@ -1,16 +1,44 @@
 package com.adaptionsoft.games.uglytrivia;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.Random;
+import java.util.*;
 
 public class TriviaGame extends Throwable implements Game {
 
 	private static final int MIN_NUMBER_OF_PLAYER = 2;
 
 	private static final int MAX_NUMBER_OF_PLAYER = 6;
+
+	private static final int MAX_NUMBER_OF_TILE = 12;
+
+	private static final int NUMBER_OF_QUESTIONS = 50;
 	private static boolean notAWinner;
 
+	private enum QuestionCategory{
+		PopQuestion{
+			@Override
+			public String toString() {
+				return "Pop Question";
+			}
+		},
+		RockQuestion{
+			@Override
+			public String toString() {
+				return "Rock Question";
+			}
+		},
+		SportsQuestion{
+			@Override
+			public String toString() {
+				return "Sports Question";
+			}
+		},
+		ScienceQuestion{
+			@Override
+			public String toString() {
+				return "Science Question";
+			}
+		}
+	}
 
 	ArrayList players = new ArrayList();
 	int[] places = new int[MAX_NUMBER_OF_PLAYER];
@@ -26,19 +54,44 @@ public class TriviaGame extends Throwable implements Game {
 	boolean isGettingOutOfPenaltyBox;
 
 	public TriviaGame(){
-		for (int i = 0; i < 50; i++) {
-			popQuestions.addLast("Pop Question " + i);
-			scienceQuestions.addLast(("Science Question " + i));
-			sportsQuestions.addLast(("Sports Question " + i));
-			rockQuestions.addLast(createRockQuestion(i));
+		initializeQuestionCategory(QuestionCategory.PopQuestion);
+		initializeQuestionCategory(QuestionCategory.RockQuestion);
+		initializeQuestionCategory(QuestionCategory.ScienceQuestion);
+		initializeQuestionCategory(QuestionCategory.SportsQuestion);
+	}
+
+	private void initializeQuestionCategory(QuestionCategory questionCategory){
+		switch (questionCategory){
+			case PopQuestion:
+				fillAndShuffleQuestionDeck(questionCategory, popQuestions);
+				break;
+			case RockQuestion:
+				fillAndShuffleQuestionDeck(questionCategory, rockQuestions);
+				break;
+			case ScienceQuestion:
+				fillAndShuffleQuestionDeck(questionCategory, scienceQuestions);
+				break;
+			case SportsQuestion:
+				fillAndShuffleQuestionDeck(questionCategory, sportsQuestions);
+				break;
 		}
 	}
 
-	public String createRockQuestion(int index){
-		return "Rock Question " + index;
+	private void fillAndShuffleQuestionDeck(QuestionCategory questionCategory, List<Object> questionList){
+		for (int i = 0; i < NUMBER_OF_QUESTIONS; i++) {
+			questionList.add(questionCategory.toString() + i);
+		}
+		shuffleQuestionList(questionList);
 	}
 
-	public boolean isPlayable() {
+	private void shuffleQuestionList(List<Object> questionList) {
+		List<Object> tempList = new ArrayList<>(questionList);
+		Collections.shuffle(tempList);
+		questionList.clear();
+		questionList.addAll(tempList);
+	}
+
+	private boolean isPlayable() {
 		return (howManyPlayers() >= MIN_NUMBER_OF_PLAYER);
 	}
 
@@ -66,22 +119,21 @@ public class TriviaGame extends Throwable implements Game {
 		return MIN_NUMBER_OF_PLAYER;
 	}
 
-
 	public int howManyPlayers() {
 		return players.size();
 	}
 
-	public void roll(int roll) {
+	private void roll(int roll) {
 		System.out.println(players.get(currentPlayer) + " is the current player");
 		System.out.println("They have rolled a " + roll);
 
 		if (inPenaltyBox[currentPlayer]) {
-			if (roll % 2 != 0) {
+			if (isPlayerGettingOutFromPenaltyBox(roll)) {
 				isGettingOutOfPenaltyBox = true;
-
+				inPenaltyBox[currentPlayer] = false;
 				System.out.println(players.get(currentPlayer) + " is getting out of the penalty box");
-				places[currentPlayer] = places[currentPlayer] + roll;
-				if (places[currentPlayer] > 11) places[currentPlayer] = places[currentPlayer] - 12;
+
+				movePlayer(roll);
 
 				System.out.println(players.get(currentPlayer)
 						+ "'s new location is "
@@ -95,8 +147,7 @@ public class TriviaGame extends Throwable implements Game {
 
 		} else {
 
-			places[currentPlayer] = places[currentPlayer] + roll;
-			if (places[currentPlayer] > 11) places[currentPlayer] = places[currentPlayer] - 12;
+			movePlayer(roll);
 
 			System.out.println(players.get(currentPlayer)
 					+ "'s new location is "
@@ -107,29 +158,48 @@ public class TriviaGame extends Throwable implements Game {
 
 	}
 
-	private void askQuestion() {
-		if (currentCategory() == "Pop")
-			System.out.println(popQuestions.removeFirst());
-		if (currentCategory() == "Science")
-			System.out.println(scienceQuestions.removeFirst());
-		if (currentCategory() == "Sports")
-			System.out.println(sportsQuestions.removeFirst());
-		if (currentCategory() == "Rock")
-			System.out.println(rockQuestions.removeFirst());
+	private void movePlayer(int roll){
+		places[currentPlayer] = (places[currentPlayer] + roll) % MAX_NUMBER_OF_TILE;
 	}
 
+	private boolean isPlayerGettingOutFromPenaltyBox(int roll){
+		return roll % 2 != 0;
+	}
 
-	private String currentCategory() {
-		if (places[currentPlayer] == 0) return "Pop";
-		if (places[currentPlayer] == 4) return "Pop";
-		if (places[currentPlayer] == 8) return "Pop";
-		if (places[currentPlayer] == 1) return "Science";
-		if (places[currentPlayer] == 5) return "Science";
-		if (places[currentPlayer] == 9) return "Science";
-		if (places[currentPlayer] == 2) return "Sports";
-		if (places[currentPlayer] == 6) return "Sports";
-		if (places[currentPlayer] == 10) return "Sports";
-		return "Rock";
+	private void askQuestion() {
+		LinkedList<Object> currentQuestionList = null;
+		switch (currentCategory()){
+			case SportsQuestion:
+				currentQuestionList = sportsQuestions;
+				break;
+			case PopQuestion:
+				currentQuestionList = popQuestions;
+				break;
+			case RockQuestion:
+				currentQuestionList = rockQuestions;
+				break;
+			case ScienceQuestion:
+				currentQuestionList = scienceQuestions;
+				break;
+		}
+		if(currentQuestionList.size() == 0){
+			fillAndShuffleQuestionDeck(currentCategory(), currentQuestionList);
+		}
+		System.out.println(currentQuestionList.removeFirst());
+
+	}
+
+	private QuestionCategory currentCategory() {
+		if (places[currentPlayer] == 0) return QuestionCategory.PopQuestion;
+		if (places[currentPlayer] == 4) return QuestionCategory.PopQuestion;
+		if (places[currentPlayer] == 8) return QuestionCategory.PopQuestion;
+		if (places[currentPlayer] == 1) return QuestionCategory.ScienceQuestion;
+		if (places[currentPlayer] == 5) return QuestionCategory.ScienceQuestion;
+		if (places[currentPlayer] == 9) return QuestionCategory.ScienceQuestion;
+		if (places[currentPlayer] == 2) return QuestionCategory.SportsQuestion;
+		if (places[currentPlayer] == 6) return QuestionCategory.SportsQuestion;
+		if (places[currentPlayer] == 10) return QuestionCategory.SportsQuestion;
+		return QuestionCategory.RockQuestion;
 	}
 
 	public boolean wasCorrectlyAnswered() {
@@ -154,10 +224,9 @@ public class TriviaGame extends Throwable implements Game {
 			}
 
 
-
 		} else {
 
-			System.out.println("Answer was corrent!!!!");
+			System.out.println("Answer was correct!!!!");
 			purses[currentPlayer]++;
 			System.out.println(players.get(currentPlayer)
 					+ " now has "
@@ -179,7 +248,7 @@ public class TriviaGame extends Throwable implements Game {
 
 		currentPlayer++;
 		if (currentPlayer == players.size()) currentPlayer = 0;
-		return true;
+			return true;
 	}
 
 
@@ -200,7 +269,9 @@ public class TriviaGame extends Throwable implements Game {
 
 		do {
 
-			roll(rand.nextInt(5) + 1);
+			int rolled = rand.nextInt(5) + 1;
+
+			roll(rolled);
 
 			if (rand.nextInt(9) == 7) {
 				notAWinner = wrongAnswer();
@@ -208,6 +279,7 @@ public class TriviaGame extends Throwable implements Game {
 				notAWinner = wasCorrectlyAnswered();
 			}
 
+			System.out.println("----------------------------");
 		} while (notAWinner);
 
 	}
