@@ -1,14 +1,27 @@
 package com.adaptionsoft.games.trivia;
 
-
-import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.adaptionsoft.games.uglytrivia.Game;
+import com.adaptionsoft.games.uglytrivia.MaxNumberOfUserViolationError;
+import com.adaptionsoft.games.uglytrivia.MinNumberOfUserViolationError;
+import com.adaptionsoft.games.uglytrivia.TriviaGame;
+import org.junit.Test;
 
 public class SomeTest {
 
-    @Test
-    public void true_is_true() throws Exception {
-        assertTrue(false);
+    @Test(expected = MinNumberOfUserViolationError.class)
+    public void startGameTestWithLessThanMinimumPlayer() throws Exception, MaxNumberOfUserViolationError {
+        Game triviaGame = new TriviaGame();
+        for(int i = 0; i < triviaGame.getMinimumNumberOfPlayer() -1; i++){
+            triviaGame.addPlayer("Test Player " + String.valueOf(i));
+        }
+        triviaGame.startGame();
+    }
+
+    @Test(expected = MaxNumberOfUserViolationError.class)
+    public void startGameTestWithMoreThanMaximumPlayer() throws Exception, MaxNumberOfUserViolationError {
+        Game triviaGame = new TriviaGame();
+        for(int i = 0; i < triviaGame.getMaximumNumberOfPlayer() + 1; i++){
+            triviaGame.addPlayer("Test Player " + String.valueOf(i));
+        }
     }
 }
